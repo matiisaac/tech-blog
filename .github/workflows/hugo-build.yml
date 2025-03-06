@@ -1,0 +1,44 @@
+name: Build a Website Using Hugo
+
+on:
+  push:
+    branches:
+      - main  # Configura la rama desde la que se desplegará
+  pull_request:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-22.04
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true  # Obtiene los temas de Hugo (true O recursive)
+          fetch-depth: 0    # Obtiene todo el historial para .GitInfo y .Lastmod
+
+      - name: Setup Hugo
+        uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: '0.119.0'
+          extended: true  # Usa la versión extendida de Hugo para soporte de SCSS/SASS
+
+      - name: Cache Hugo Modules
+        uses: actions/cache@v4
+        env:
+          HUGO_CACHEDIR: /tmp/hugo_cache
+        with:
+          path: ${{ env.HUGO_CACHEDIR }}
+          key: ${{ runner.os }}-hugomod-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-hugomod-
+
+      - name: Build
+        run: hugo --minify
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        if: github.ref == 'refs/heads/main'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
