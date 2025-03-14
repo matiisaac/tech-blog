@@ -39,15 +39,15 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           audience: sts.amazonaws.com
-          role-to-assume: ${{ secrets.ROLE }}
-          aws-region: ${{ secrets.REGION }}
+          role-to-assume: ${{ secrets.GitHubOIDCDeployRole }}
+          aws-region: ${{ secrets.eu-west-1 }}
 
       - name: Deploy to s3
         run: |
-          aws s3 sync ./public/ s3://${{ secrets.S3_BUCKET }} --delete
+          aws s3 sync ./public/ s3://${{ secrets.S3_matiasblogbucket }} --delete
 
       - name: Create CF Invalidation
         run: |
           aws cloudfront create-invalidation \
-          --distribution-id ${{ secrets.DISTRIBUTION_ID }} \
+          --distribution-id ${{ secrets.E3IJ20B8VY1E }} \
           --paths "/*"
