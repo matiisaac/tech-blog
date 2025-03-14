@@ -46,8 +46,18 @@ jobs:
         run: |
           aws s3 sync ./public/ s3://matiasblogbucket --delete
 
-      - name: Create CF Invalidation
+      - name: Assume CloudFront role
+        run: |
+          CREDENTIALS=$(aws sts assume-role \
+            --role-arn arn:aws:iam::762233767039:role/CloudFrontInvalidationRole \
+            --role-session-name GitHubActionsCloudFrontSession)
+          
+          echo "AWS_ACCESS_KEY_ID=$(echo $CREDENTIALS | jq -r '.Credentials.AccessKeyId')" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=$(echo $CREDENTIALS | jq -r '.Credentials.SecretAccessKey')" >> $GITHUB_ENV
+          echo "AWS_SESSION_TOKEN=$(echo $CREDENTIALS | jq -r '.Credentials.SessionToken')" >> $GITHUB_ENV
+
+      - name: Invalidate CloudFront distribution
         run: |
           aws cloudfront create-invalidation \
-          --distribution-id E3IJ20B8VY1E \
-          --paths "/*"
+            --distribution-id E3IJ20B8VY1E \
+            --paths "/*"
