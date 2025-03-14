@@ -40,7 +40,7 @@ jobs:
         with:
           audience: sts.amazonaws.com
           role-to-assume: ${{ secrets.GitHubOIDCDeployRole }}
-          aws-region: ${{ secrets.eu-west-1 }}
+          aws-region: eu-west-1
 
       - name: Deploy to s3
         run: |
