@@ -3,8 +3,11 @@ name: Build a Website Using Hugo
 on:
   push:
     branches:
-      - main  # Configura la rama desde la que se desplegará
-  pull_request:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   deploy:
@@ -14,31 +17,37 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: true  # Obtiene los temas de Hugo (true O recursive)
+          submodules: true  # Obtiene los temas de Hugo (true o recursive)
           fetch-depth: 0    # Obtiene todo el historial para .GitInfo y .Lastmod
 
       - name: Setup Hugo
         uses: peaceiris/actions-hugo@v3
         with:
-          hugo-version: '0.119.0'
+          hugo-version: '0.135.0'
           extended: true  # Usa la versión extendida de Hugo para soporte de SCSS/SASS
-
-      - name: Cache Hugo Modules
-        uses: actions/cache@v4
-        env:
-          HUGO_CACHEDIR: /tmp/hugo_cache
-        with:
-          path: ${{ env.HUGO_CACHEDIR }}
-          key: ${{ runner.os }}-hugomod-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-hugomod-
 
       - name: Build
         run: hugo --minify
 
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
-        if: github.ref == 'refs/heads/main'
+      - name: Upload Build Artefact
+        uses: actions/upload-artifact@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./public
+          name: tech-blog
+          path: public/**
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          audience: sts.amazonaws.com
+          role-to-assume: ${{ secrets.ROLE }}
+          aws-region: ${{ secrets.REGION }}
+
+      - name: Deploy to s3
+        run: |
+          aws s3 sync ./public/ s3://${{ secrets.S3_BUCKET }} --delete
+
+      - name: Create CF Invalidation
+        run: |
+          aws cloudfront create-invalidation \
+          --distribution-id ${{ secrets.DISTRIBUTION_ID }} \
+          --paths "/*"
